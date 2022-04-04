@@ -7,13 +7,15 @@ logger.setLevel(logging.DEBUG)
 
 
 class DB_Element:
+    primary_key = ()
+
     def __init__(self, table_name):
         self._table_name = table_name
 
     def __eq__(self, other):
         '''Check for equality based on primary key.'''
         # TODO maybe change to get_attributes
-        for k in self.primary_key():
+        for k in self.primary_key:
             if self.__dict__[k] != other.__dict__[k]:
                 return False
         return True
@@ -21,10 +23,10 @@ class DB_Element:
     def __hash__(self):
         '''Calculate hash based on primary key.'''
         # TODO maybe change to get_attributes
-        return sum(hash(self.__dict__[k]) for k in self.primary_key())
+        return sum(hash(self.__dict__[k]) for k in self.primary_key)
 
     def __str__(self):
-        pk = self.primary_key()
+        pk = self.primary_key
         opt_keys = set(self.get_attributes()) - set(pk)
         components = [f'{k}: {self.__dict__[k]}' for k in pk]
         opt_components = [f'{k}: {self.__dict__[k]}' for k in opt_keys if self.__dict__[k] is not None]
@@ -35,7 +37,7 @@ class DB_Element:
     def FromDict(cls, etdict):
         '''Return an object from the information in etdict or None, if the information is incomplete'''
         # TODO consolidate etid vs id: only etid
-        pk = cls.primary_key()
+        pk = cls.primary_key
         for k in pk:
             if k not in etdict:
                 logger.error('converting incompatible dict')
@@ -61,7 +63,7 @@ class DB_Element:
     @classmethod
     def Dummy(cls):
         '''Construct a dummy object from None-values'''
-        return cls(*[None for _ in cls.primary_key()])
+        return cls(*[None for _ in cls.primary_key])
 
     def to_dict(self):
         base_dict = self.__dict__
@@ -107,7 +109,7 @@ class DB_Element:
         if strict:
             class_keys = self.get_attributes()
         else:
-            class_keys = self.primary_key()
+            class_keys = self.primary_key
 
         if only_keys is not None:
             class_keys = [k for k in class_keys if k in only_keys]
@@ -225,7 +227,7 @@ class DB_Element_With_Foreign_Key(DB_Element):
 
         # add primary key of all referenced tables
         for name, db_elm in referenced_elements.items():
-            for pk in db_elm.primary_key():
+            for pk in db_elm.primary_key:
                 self.__dict__[self.primary_to_foreign_key(type(db_elm) ,pk, name)] = db_elm.__dict__[pk]
 
     def get_referenced_element(self, name, etdb):
@@ -239,7 +241,7 @@ class DB_Element_With_Foreign_Key(DB_Element):
     def LookupForElements(self, element_names: List[str], etdb) -> List[DB_Element_With_Foreign_Key]:
         keys = [self.primary_to_foreign_key(type(self._referenced_elements[name]), k, name)
                 for name in element_names
-                for k in self._referenced_elements[name].primary_key()]
+                for k in self._referenced_elements[name].primary_key]
         cols, rows = self.lookup_for_keys(keys, etdb)
         return [self.FromDBEntry(cols, row) for row in rows]
 
@@ -280,13 +282,13 @@ class DB_Element_With_Foreign_Key(DB_Element):
 
         return cls(**elems, **non_foreign_param_dict)
     # def where_clause_keys(self, strict=False):
-    #     class_foreign_keys = (self.primary_to_foreign_key(cls, key) for cls in self._referenced_tables for key in cls.primary_key())
+    #     class_foreign_keys = (self.primary_to_foreign_key(cls, key) for cls in self._referenced_tables for key in cls.primary_key)
     #     # convert keys from class foreign key to schema foreign key
     #     foreign_keys = [self.convert_key_from_class_to_schema(key) for key in class_foreign_keys]
     #     if strict:
     #         own_class_keys = self.get_attributes()
     #     else:
-    #         own_class_keys = self.primary_key()
+    #         own_class_keys = self.primary_key
     #     own_class_non_foreign_keys = [k for k in own_class_keys if k not in class_foreign_keys]
     #     own_non_foreign_keys = [self.convert_key_from_class_to_schema(k) for k in own_class_non_foreign_keys]
     #     return class_foreign_keys + own_class_keys, foreign_keys + own_non_foreign_keys
