@@ -212,10 +212,6 @@ class DB_Element:
         return k
 
     @classmethod
-    def primary_key(cls):
-        raise(NotImplementedError(f'All sub classes of {cls} need to implement this function!'))
-
-    @classmethod
     def get_descriptions(cls):
         raise(NotImplementedError(f'All sub classes of {cls} need to implement this function!'))
 
