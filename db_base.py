@@ -69,7 +69,6 @@ class DB_Element:
         base_dict = self.__dict__
         return {k: base_dict[k] for k in self.get_attributes()}
 
-
     @classmethod
     def get_attributes(cls):
         '''Get a list of attributes of the DB object. All members which should *not* appear here must be private (start with "_").'''
@@ -87,13 +86,16 @@ class DB_Element:
         update_elements = [(True, f'{keys[i]}=?') for i in range(len(class_keys))]
         # select clause contains either "=?" or "is NULL"
         # in the latter case there is no data element to be supplied to the call to execute, so we need to discern them using the first element in the tuple
-        where_elements = [(True, f'{keys[i]}=?') if self.__dict__[class_keys[i]] is not None else (False, f'{keys[i]} is NULL')
-                           for i in range(len(class_keys))]
+        where_elements = [(True, f'{keys[i]}=?')
+                          if self.__dict__[class_keys[i]] is not None
+                          else (False, f'{keys[i]} is NULL')
+                          for i in range(len(class_keys))]
 
         clause = f'UPDATE {self._table_name} set ' + ', '.join([elm[1] for elm in update_elements]) + ' where ' + ' and '.join([elm[1] for elm in where_elements]) + ';'
         # lists of class keys to be used for the call to execute per object
         update_keys = class_keys
-        select_keys = [class_keys[i] for i in range(len(class_keys)) if where_elements[i][0] is True]
+        select_keys = [class_keys[i] for i in range(len(class_keys))
+                       if where_elements[i][0] is True]
 
         return update_keys, select_keys, clause
 
@@ -122,11 +124,15 @@ class DB_Element:
         # select clause contains either "=?" or "is NULL"
         # in the latter case there is no data element to be supplied to the call to execute, so we need to discern them using the first element in the tuple
         if fuzzy:
-            where_elements = [(True, f'{keys[i]} like ?') if self.__dict__[class_keys[i]] is not None else (False, f'{keys[i]} is NULL')
-                               for i in range(len(class_keys))]
+            where_elements = [(True, f'{keys[i]} like ?')
+                              if self.__dict__[class_keys[i]] is not None
+                              else (False, f'{keys[i]} is NULL')
+                              for i in range(len(class_keys))]
         else:
-            where_elements = [(True, f'{keys[i]}=?') if self.__dict__[class_keys[i]] is not None else (False, f'{keys[i]} is NULL')
-                               for i in range(len(class_keys))]
+            where_elements = [(True, f'{keys[i]}=?')
+                              if self.__dict__[class_keys[i]] is not None
+                              else (False, f'{keys[i]} is NULL')
+                              for i in range(len(class_keys))]
         if conjunction:
             clause = ' and '.join([elm[1] for elm in where_elements])
         else:
@@ -168,7 +174,8 @@ class DB_Element:
     def insert_clause(self):
         class_keys = self.get_attributes()
         keys = [self.convert_key_from_class_to_schema(k) for k in class_keys]
-        column_elements = [(class_keys[i], keys[i]) for i in range(len(class_keys)) if self.__dict__[class_keys[i]]]
+        column_elements = [(class_keys[i], keys[i]) for i in range(len(class_keys))
+                           if self.__dict__[class_keys[i]]]
         column_clause = ', '.join([key for _, key in column_elements])
         values_clause = ', '.join(['?' for _ in column_elements])
 
@@ -193,7 +200,6 @@ class DB_Element:
 
     def remove(self, etdb):
         return self.delete(etdb)
-
 
     @classmethod
     def convert_key_from_class_to_schema(cls, k):
@@ -235,7 +241,7 @@ class DB_Element_With_Foreign_Key(DB_Element):
         # add primary key of all referenced tables
         for name, db_elm in referenced_elements.items():
             for pk in db_elm.primary_key:
-                self.__dict__[self.primary_to_foreign_key(type(db_elm) ,pk, name)] = db_elm.__dict__[pk]
+                self.__dict__[self.primary_to_foreign_key(type(db_elm), pk, name)] = db_elm.__dict__[pk]
 
     def get_referenced_element(self, name, etdb):
         '''Lookup and return referenced element in db'''
@@ -280,7 +286,8 @@ class DB_Element_With_Foreign_Key(DB_Element):
             else:
                 elems_param_dict[elem_name][primary_key] = value
         # TODO use elm_cls.FromDict?
-        elems = {elem_name: cls._elements[elem_name](**elem_params) for elem_name, elem_params in elems_param_dict.items()}
+        elems = {elem_name: cls._elements[elem_name](**elem_params)
+                 for elem_name, elem_params in elems_param_dict.items()}
 
         # initialize missing elements with dummys
         for elem_name, elem in cls._elements.items():
@@ -303,6 +310,8 @@ class DB_Element_With_Foreign_Key(DB_Element):
     @classmethod
     def primary_to_foreign_key(cls, other_cls, k, elm_name):
         '''Convert primary class key to class foreign key. Override if you need to!'''
+        if k.lower() in cls._primary_to_foreign_key:
+            return cls._primary_to_foreign_key[k.lower()]
         return k
 
     @classmethod
