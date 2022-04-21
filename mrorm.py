@@ -27,6 +27,7 @@ def get_db_sub_class(name: str, cols: List[str], pk: List[str]) -> Type:
         primary_key = pk
         _table_name = name
         _cols = cols
+
         def __init__(self, **kwargs):
             # set all supplied attributes
             for col in self._cols:
@@ -34,6 +35,9 @@ def get_db_sub_class(name: str, cols: List[str], pk: List[str]) -> Type:
                     self.__dict__[col] = kwargs[col]
                 else:
                     self.__dict__[col] = None
+
+                # Do not check primary key, use FromDict if you want that
+                # The Constructor should allow non-unique items e.g., for lookup
                 remaining_keys = list(set(kwargs.keys()) - set(self._cols))
                 if len(remaining_keys) > 0:
                     print(f'{self._table_name}: superfluous parameters in constructor: {remaining_keys}', file=sys.stderr)
