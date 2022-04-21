@@ -73,8 +73,8 @@ class DB_Element:
         dummy = cls.Dummy()
         return [k for k in dummy.__dict__.keys() if not k.startswith('_')]
 
-    def commit(self, etdb):
-        etdb.commit()
+    def commit(self, con):
+        con.commit()
 
     def update_clause(self):
         '''Create update clause using server side information and type information from this object, which may contain data from remote data. The type information is strictly only used to decide whether to generate a "key=?" or "key is NULL".'''
@@ -97,13 +97,13 @@ class DB_Element:
 
         return update_keys, select_keys, clause
 
-    def update(self, new, etdb):
+    def update(self, new, con):
         new_keys, old_keys, clause = self.update_clause()
-        c = etdb.conn.cursor()
+        c = con.cursor()
         elems = tuple([new.__dict__[k] for k in new_keys] + [self.__dict__[k] for k in old_keys])
         logger.info(f'elems: {elems}')
         c.execute(clause, elems)
-        self.commit(etdb)
+        self.commit(con)
 
     def where_clause_keys(self, strict=True, only_keys=None):
         if strict:
@@ -146,25 +146,25 @@ class DB_Element:
         schema_keys = [self.convert_key_from_class_to_schema(k) for k in only_keys]
         return ', '.join(schema_keys)
 
-    def lookup_for_keys(self, only_keys, etdb, conjunction=True, fuzzy=False, return_all_cols=True):
+    def lookup_for_keys(self, only_keys, con, conjunction=True, fuzzy=False, return_all_cols=True):
         class_keys, where_clause = self.where_clause(True, only_keys, conjunction, fuzzy)
         select_clause = self.select_clause(return_all_cols, only_keys)
-        c = etdb.conn.cursor()
+        c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
         c.execute(f'select {select_clause} from {self._table_name} where {where_clause}', elems)
         return [col[0] for col in c.description], c.fetchall()
 
-    def lookup_exactly(self, etdb):
+    def lookup_exactly(self, con):
         class_keys, where_clause = self.where_clause(strict=True)
-        c = etdb.conn.cursor()
+        c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
         c.execute(f'select * from {self._table_name} where {where_clause}', elems)
         return [col[0] for col in c.description], c.fetchall()
 
-    def lookup(self, etdb):
+    def lookup(self, con):
         '''Return either exactly one or zero row in the form (cols, rows).'''
         class_keys, where_clause = self.where_clause(strict=False)
-        c = etdb.conn.cursor()
+        c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
         c.execute(f'select * from {self._table_name} where {where_clause}', elems)
         return [col[0] for col in c.description], c.fetchall()
@@ -179,25 +179,25 @@ class DB_Element:
 
         return [class_key for class_key, _ in column_elements], column_clause, values_clause
 
-    def insert(self, etdb):
+    def insert(self, con):
         class_keys, column_clause, values_clause = self.insert_clause()
-        c = etdb.conn.cursor()
+        c = con.cursor()
         c.execute(f'insert into {self._table_name} ({column_clause}) values ({values_clause})',
                   tuple(self.__dict__[class_key] for class_key in class_keys))
-        self.commit(etdb)
+        self.commit(con)
 
     def delete_clause(self):
         raise NotImplementedError('use where_clause instead')
 
-    def delete(self, etdb):
+    def delete(self, con):
         class_keys, where_clause = self.where_clause(strict=False)
-        c = etdb.conn.cursor()
+        c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
         c.execute(f'delete from {self._table_name} where {where_clause}', elems)
-        self.commit(etdb)
+        self.commit(con)
 
-    def remove(self, etdb):
-        return self.delete(etdb)
+    def remove(self, con):
+        return self.delete(con)
 
     @classmethod
     def convert_key_from_class_to_schema(cls, k):
@@ -237,19 +237,19 @@ class DB_Element_With_Foreign_Key(DB_Element):
             for pk in db_elm.primary_key:
                 self.__dict__[self.primary_to_foreign_key(type(db_elm), pk, name)] = db_elm.__dict__[pk]
 
-    def get_referenced_element(self, name, etdb):
+    def get_referenced_element(self, name, con):
         '''Lookup and return referenced element in db'''
         elm = self._referenced_elements[name]
-        cols, rows = elm.lookup(etdb)
+        cols, rows = elm.lookup(con)
         if len(rows) > 0:
             return elm.FromDBEntry(cols, rows[0])
         return None
 
-    def LookupForElements(self, element_names: List[str], etdb) -> List[DB_Element_With_Foreign_Key]:
+    def LookupForElements(self, element_names: List[str], con) -> List[DB_Element_With_Foreign_Key]:
         keys = [self.primary_to_foreign_key(type(self._referenced_elements[name]), k, name)
                 for name in element_names
                 for k in self._referenced_elements[name].primary_key]
-        cols, rows = self.lookup_for_keys(keys, etdb)
+        cols, rows = self.lookup_for_keys(keys, con)
         return [self.FromDBEntry(cols, row) for row in rows]
 
     @classmethod
