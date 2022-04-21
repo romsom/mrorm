@@ -226,7 +226,7 @@ class DB_Element_With_Foreign_Key(DB_Element):
     # Map native to foreign key names
     _primary_to_foreign_key: ClassVar[Dict[str, str]] = {}
     _foreign_to_primary_key: ClassVar[Dict[str, str]] = {fk: pk for pk, fk
-                                                         in _primary_to_foreign_key.values()}
+                                                         in _primary_to_foreign_key.items()}
 
     def __init__(self, table_name, referenced_elements: Dict[str, DB_Element]):
         super().__init__()
