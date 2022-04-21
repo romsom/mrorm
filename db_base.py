@@ -132,9 +132,11 @@ class DB_Element:
                               else (False, f'{keys[i]} is NULL')
                               for i in range(len(class_keys))]
         if conjunction:
-            clause = ' and '.join([elm[1] for elm in where_elements])
+            clause = 'where ' if len(where_elements) > 0 else ''
+            clause += ' and '.join([elm[1] for elm in where_elements])
         else:
-            clause = ' or '.join([elm[1] for elm in where_elements])
+            clause = 'where ' if len(where_elements) > 0 else ''
+            clause += ' or '.join([elm[1] for elm in where_elements])
         # list of class keys to be used for the call to execute
         select_keys = [class_keys[i] for i in range(len(class_keys)) if where_elements[i][0] is True]
 
@@ -151,14 +153,14 @@ class DB_Element:
         select_clause = self.select_clause(return_all_cols, only_keys)
         c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
-        c.execute(f'select {select_clause} from {self._table_name} where {where_clause}', elems)
+        c.execute(f'select {select_clause} from ? {where_clause}', elems, self._table_name)
         return [col[0] for col in c.description], c.fetchall()
 
     def lookup_exactly(self, con):
         class_keys, where_clause = self.where_clause(strict=True)
         c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
-        c.execute(f'select * from {self._table_name} where {where_clause}', elems)
+        c.execute(f'select * from {self._table_name} {where_clause}', elems)
         return [col[0] for col in c.description], c.fetchall()
 
     def lookup(self, con):
@@ -166,7 +168,7 @@ class DB_Element:
         class_keys, where_clause = self.where_clause(strict=False)
         c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
-        c.execute(f'select * from {self._table_name} where {where_clause}', elems)
+        c.execute(f'select * from {self._table_name} {where_clause}', elems)
         return [col[0] for col in c.description], c.fetchall()
 
     def insert_clause(self):
@@ -193,7 +195,7 @@ class DB_Element:
         class_keys, where_clause = self.where_clause(strict=False)
         c = con.cursor()
         elems = tuple(self.__dict__[k] for k in class_keys)
-        c.execute(f'delete from {self._table_name} where {where_clause}', elems)
+        c.execute(f'delete from {self._table_name} {where_clause}', elems)
         self.commit(con)
 
     def remove(self, con):
