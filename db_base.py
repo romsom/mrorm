@@ -7,10 +7,8 @@ logger.setLevel(logging.DEBUG)
 
 
 class DB_Element:
-    primary_key: Tuple[str]
-
-    def __init__(self, table_name):
-        self._table_name = table_name
+    primary_key: List[str]
+    _table_name: str
 
     def __eq__(self, other):
         '''Check for equality based on primary key.'''
@@ -231,7 +229,7 @@ class DB_Element_With_Foreign_Key(DB_Element):
                                                          in _primary_to_foreign_key.values()}
 
     def __init__(self, table_name, referenced_elements: Dict[str, DB_Element]):
-        super().__init__(table_name)
+        super().__init__()
         self._referenced_elements = referenced_elements
 
         # add primary key of all referenced tables
